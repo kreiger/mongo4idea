@@ -16,14 +16,14 @@
 
 package org.codinjutsu.tools.mongo.logic.ssh;
 
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
+import com.jcraft.jsch.*;
 import org.codinjutsu.tools.mongo.ServerConfiguration;
 import org.codinjutsu.tools.mongo.SshTunnelingConfiguration;
 import org.codinjutsu.tools.mongo.logic.ConfigurationException;
 
+import javax.swing.*;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -65,9 +65,13 @@ public class SshConnection implements Closeable {
             int proxyPort = sshTunnelingConfiguration.getProxyPort();
             String proxyUser = sshTunnelingConfiguration.getProxyUser();
             String password = sshTunnelingConfiguration.getProxyPassword();
+            if (password == null || password.isEmpty()) {
+                OpenSSHConfig openSSHConfig = OpenSSHConfig.parseFile("~/.ssh/config");
+                jsch.setConfigRepository(openSSHConfig);
+            }
             Session session = jsch.getSession(proxyUser, proxyHost, proxyPort);
             session.setPassword(password);
-
+            session.setTimeout(10000);
             java.util.Properties config = new java.util.Properties();
             config.put("StrictHostKeyChecking", "no");
             session.setConfig(config);
@@ -80,7 +84,8 @@ public class SshConnection implements Closeable {
 
             return session;
 
-        } catch (JSchException ex) {
+        } catch (JSchException | IOException ex) {
+            ex.printStackTrace();
             throw new ConfigurationException(ex);
         }
     }
